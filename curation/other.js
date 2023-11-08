@@ -34,12 +34,12 @@ function setupPaperCanvas() {
 }
 
 function hashPack() {
-    bools[0] = P.background ?? bools[0]
+    bools[Bbg] = P.background ?? bools[Bbg]
     // print(P.background)
-    bools[1] = P.filled ?? bools[1]
-    bools[2] = P.project ?? bools[2]
+    bools[Bf] = P.filled ?? bools[Bf]
+    bools[Bp] = P.project ?? bools[Bp]
     // print(bools)
-    let binaryString = bits.join('') + bools.map(b => b ? 1 : 0).join('')
+    let binaryString = bits.map(b => b ? 1 : 0).join('') + bools.map(b => b ? 1 : 0).join('')
     let hexString = ''
     for (let i = 0; i < binaryString.length; i += 4) {
         hexString += parseInt(binaryString.slice(i, i + 4), 2).toString(16)
@@ -54,7 +54,7 @@ function hashPack() {
 
 //0x2f770fce3d2676b0d0f49d12b508d9cf94c466175b7874a0158e649b2cbcd54d
 // `     chair                                     `bools`rndseed`color
-//       220                                          8     3      6
+//       220                                          8     4      24
 // & 0x1111...111000
 // | 0x000...000color
 
@@ -67,11 +67,11 @@ function hashUnpack(hash) {
     for (let i = 0; i < bitsLen; i++) {
         binaryString += parseInt(hash[i], 16).toString(2).padStart(4, '0')
     }
-    bits = binaryString.slice(0, 220).split('').map(a => parseInt(a))
-    bools = binaryString.slice(220, bitsLen * 4).split('').map(a => parseInt(a) == 1)
+    let bits = binaryString.slice(0, 220).split('').map(a => parseInt(a))
+    let bools = binaryString.slice(220, bitsLen * 4).split('').map(a => parseInt(a) == 1)
     let rndseed = parseInt(hash.slice(bitsLen, bitsLen + 1), 16)
     let ink = '#' + hash.slice(bitsLen + 1, bitsLen + 6 + 1)
-    return [ink, rndseed]
+    return [ink, rndseed, bits, bools]
 }
 
 
@@ -154,6 +154,7 @@ let permanentParams = () => {
     P.newLoad = newLoad
     P.redraw = myredraw
     P.newdraw = newdraw
+
 
 }
 
@@ -342,13 +343,15 @@ let rnd, vec, W, H
 let simplex, sn2, sn3, sn4;
 
 function setupRandom() {
-    seedRNG(hash)
-
     rnd = random
     vec = createVector
+
+    seedRNG(hash)
+
     sn2 = simplex.noise2D.bind(simplex)
     sn3 = simplex.noise3D.bind(simplex)
     sn4 = simplex.noise4D.bind(simplex)
+
 }
 
 function sn(...args) {
@@ -358,14 +361,6 @@ function sn(...args) {
 
 
 function seedRNG() {
-    let generateHash = () => {
-        let result = '';
-        const characters = '0123456789abcdef';
-        for (let i = 0; i < 64; i++) {
-            result += characters.charAt(Math.floor(Math.random() * characters.length));
-        }
-        return '0x' + result;
-    }
     if (hash == '') {
         hash = generateHash()
     }
@@ -374,12 +369,138 @@ function seedRNG() {
         hash = hashPack()
     }
 
-    let [ink, rndseed] = hashUnpack(hash)
-
+    let [ink, rndseed, bitsNew, boolsNew] = hashUnpack(hash)
+    bits = bitsNew
+    bools = boolsNew
     P.ink = ink
     P.rndseed = rndseed
 
     randomSeed(P.rndseed)
     noiseSeed(P.rndseed)
     simplex = new SimplexNoise(P.rndseed)
+}
+
+function generateHash() {
+    let hb = new HashBuilder()
+    hb.bitFlip(0, 220, 0.5)
+    hb.toggleBackground()
+    hb.toggleFilled()
+    hb.toggleProject()
+    hb.setInk('#abcdef')
+    hb.setRndseed(0)
+    hb.done()
+    return hash
+}
+
+let Bbg = 0
+let Bf = 1
+let Bp = 2
+
+class HashBuilder {
+    constructor(hash) {
+        if (hash) {
+            [this.ink, this.rndseed, this.bits, this.bools] = hashUnpack(hash)
+        } else {
+            this.bits = []
+            for (let i = 0; i < 220; i++) {
+                this.bits.push(0)
+            }
+            this.bools = []
+            for (let i = 0; i < 8; i++) {
+                this.bools.push(0)
+            }
+            this.rndseed = 0
+            this.ink = '#000000'
+        }
+    }
+
+    shiftLeft(n) {
+        for (let i = 0; i < n; i++) {
+            this.bits.shift()
+            this.bits.push(0)
+        }
+        return this;
+    }
+
+    shiftRight(n) {
+        for (let i = 0; i < n; i++) {
+            this.bits.pop()
+            this.bits.unshift(0)
+        }
+        return this;
+    }
+
+    or(other) {
+        for (let i = 0; i < 220; i++) this.bits[i] = this.bits[i] || other.bits[i]
+        return this;
+    }
+
+    and(other) {
+        for (let i = 0; i < 220; i++) this.bits[i] = this.bits[i] && other.bits[i]
+        return this;
+    }
+
+    xor(other) {
+        for (let i = 0; i < 220; i++) this.bits[i] = this.bits[i] != other.bits[i]
+        return this;
+    }
+
+    not() {
+        for (let i = 0; i < 220; i++) this.bits[i] = !this.bits[i]
+        return this;
+    }
+
+    bitFlip(a = 0, b = 220, prob = 0.5) {
+        for (let i = a; i < b; i++) {
+            this.bits[i] = rnd() < prob ? !this.bits[i] : this.bits[i]
+        }
+        return this;
+    }
+
+    toggleProject(on) {
+        if (on != undefined) this.bools[Bp] = on
+        else this.bools[Bp] = !this.bools[Bp]
+    }
+
+    toggleFilled(on) {
+        if (on != undefined) this.bools[Bf] = on
+        else this.bools[Bf] = !this.bools[Bf]
+    }
+
+    toggleBackground(on) {
+        if (on != undefined) this.bools[Bbg] = on
+        else this.bools[Bbg] = !this.bools[Bbg]
+    }
+
+    setInk(ink) {
+        this.ink = ink
+    }
+
+    setRndseed(rndseed) {
+        this.rndseed = rndseed
+    }
+
+    validate() {
+        if (this.bits.length != 220 ||
+            this.bools.length != 8 ||
+            this.ink.length != 7 ||
+            this.rndseed < 0 ||
+            this.rndseed > 15 ||
+            this.bits.some(b => b != 0 && b != 1) ||
+            this.bools.some(b => b != 0 && b != 1) ||
+            !this.ink.startsWith('#')
+        ) {
+            throw 'hash error'
+        }
+    }
+
+    done() {
+        this.validate()
+        P.ink = this.ink
+        P.rndseed = this.rndseed
+        bits = this.bits
+        bools = this.bools
+        hashPack()
+    }
+
 }

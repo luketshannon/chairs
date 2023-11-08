@@ -2,11 +2,10 @@
 
 
 // algorithm for new chairs
+// finalize projection sizes
 
 // finalize interactivity
 // finalize joinery
-// finalize projection sizes
-
 // perfect scalability
 
 let svgwidthin = 4 * 12
@@ -20,9 +19,9 @@ let P = {}
 function setupParams() {
     permanentParams()
 
-    P.background = bools[0]
-    P.filled = bools[1]
-    P.project = bools[2]
+    P.background = bools[Bbg]
+    P.filled = bools[Bf]
+    P.project = bools[Bp]
     P.outlines = P.outlines ?? false
 
     P.length = 18
@@ -117,6 +116,7 @@ function draw() {
     if (!isLooping()) {
         return
     }
+
     paper.project.clear()
 
     let margin = 2 * S
@@ -165,7 +165,7 @@ function draw() {
         if ((P.x) % TAU > PI) { allSides = [right, ...other, left] }
         else { allSides = [left, ...other, right] }
 
-        let distance = mouseX / W//1 - constrain(dist(windowWidth / 2, windowHeight / 2, mouseX, mouseY) / W, 0, 1)
+        let distance = 1//mouseX / W//1 - constrain(dist(windowWidth / 2, windowHeight / 2, mouseX, mouseY) / W, 0, 1)
 
         // tween doubled up baked paths with tops and bots
         allSides.map(([orientation, path, top, bot], i) => {
@@ -189,7 +189,7 @@ function draw() {
             })
             // path.remove()
 
-            P.x += 0.002
+            // P.x += 0.002
             // P.y += 0.3
             // ordering
             let tol = 0
@@ -207,7 +207,29 @@ function draw() {
             }
         })
     }
+    updatePathsStroke()
 }
+
+function updatePathsStroke() {
+    // Iterate over all layers in the project
+    for (var i = 0; i < paper.project.layers.length; i++) {
+        var layer = paper.project.layers[i];
+
+        // Iterate over all items in the layer
+        for (var j = 0; j < layer.children.length; j++) {
+            var item = layer.children[j];
+
+            // Check if the item is a path
+            if (item instanceof paper.Path || item instanceof paper.CompoundPath) {
+                // Set the stroke width and bevel join
+                item.strokeWidth = S * 2;
+                item.strokeJoin = 'bevel';
+                item.strokeCap = 'butt';
+            }
+        }
+    }
+}
+
 
 function bake(faces, polys) {
     let bakes = []
@@ -362,7 +384,7 @@ function project(baked) {
         // ry *= S
         // rz *= S
 
-        let zoff = 4
+        let zoff = 8 * S
         //increase size by 1.3
         let top = piece.clone()
         top.position = new paper.Point(0, 0)
