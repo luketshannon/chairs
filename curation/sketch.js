@@ -162,9 +162,13 @@ function draw() {
         let other = [allSides[0], allSides[1], allSides[2], allSides[3]]
         other = other.sort((a, b) => - a[0].shape[0].z + b[0].shape[0].z)
 
-        if ((P.x) % TAU > PI) { allSides = [right, ...other, left] }
-        else { allSides = [left, ...other, right] }
-
+        if ((P.x % TAU + TAU) % TAU > PI) {
+            allSides = [right, ...other, left]
+        }
+        else {
+            allSides = [left, ...other, right]
+        }
+        // P.x += 0.01
         let distance = 1//mouseX / W//1 - constrain(dist(windowWidth / 2, windowHeight / 2, mouseX, mouseY) / W, 0, 1)
 
         // tween doubled up baked paths with tops and bots
@@ -372,7 +376,7 @@ function project(baked) {
         1: [0, -210, 185, 5 / 180 * PI, PI, 0], //back
         2: [0, 155, -200, 0, 0, 0], // front
         3: [0, 170, 185, -5 / 180 * PI, PI, 0], // skirt
-        4: [-210, 0, 0, 0, PI / 2, 0], // right sid
+        4: [-210, 0, 0, 0, PI / 2, 0], // right side
         5: [210, 0, 0, 0, -PI / 2, 0], // left side
     }
 

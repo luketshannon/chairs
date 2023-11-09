@@ -15,6 +15,7 @@ function setupPaperCanvas() {
         // at the position of the mouse (event.point):
         if (!polys.length) return
         let bitsIdx = -1
+        let change = false
         polys.map(poly => {
             if (poly.alpha != 0.75
                 && poly.sw != 17
@@ -25,11 +26,13 @@ function setupPaperCanvas() {
                 if (poly.contains(vec(event.point.x, event.point.y))) {
                     poly.on = !poly.on
                     bits[bitsIdx] = poly.on ? 1 : 0
+                    change = true
                 }
             }
         })
         // hash = hashPack()
-        setup()
+        if (change)
+            setup()
     }
 }
 
