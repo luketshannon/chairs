@@ -14,6 +14,8 @@ let S = 1000
 const urlParams = new URLSearchParams(window.location.search);
 let hash = urlParams.get('hash') ?? ''
 
+let bitstring = urlParams.get('bits') ?? ''
+
 let P = {}
 function setupParams() {
     permanentParams()
@@ -129,7 +131,7 @@ function draw() {
     if (P.outlines) {
         polys.map(poly => {
             let outline = new Poly(poly.shape, 0, 0, 1 * P.length / 18, 0, 1)
-            outline.setColor(-1, '#000000').draw()
+            outline.setColor(-1, '#dddddd').draw()
         })
     }
 
@@ -734,3 +736,35 @@ function mouseDragged() {
     P.y += (mouseY - pmouseY) * 0.005
 }
 
+function keyPressed() {
+    if (key == 't') {
+        P.randomLayout()
+    }
+    if (key == 'w') {
+        P.project = !P.project
+    }
+    if (key == 'f') {
+        P.filled = !P.filled
+    }
+    if (key == 'd') {
+        P.outlines = !P.outlines
+    }
+    if (key == 's') {
+        savePaperSVG()
+    }
+    if (key == 'c') {
+        P.copyToAll()
+        setup()
+    }
+    if (key == 'q') {
+        P.interactive = !P.interactive
+    }
+    if (key == 'x') {
+        P.clear()
+        setup()
+    }
+    if (key == 'z') {
+        P.full()
+        setup()
+    }
+} 

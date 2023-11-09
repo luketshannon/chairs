@@ -158,7 +158,18 @@ let permanentParams = () => {
     }
     P.permute = () => {
         let hb = new HashBuilder(hash)
-        hb.bitFlip(0, 220, 0.1)
+        hb.bitFlip(0, 220, 0.03)
+        hb.done()
+    }
+    P.remove = () => {
+        // turn off a small percent of bits
+        let hb = new HashBuilder(hash)
+        hb.bitOp(0, 220, HashBuilder.And, 0, 0.03)
+        hb.done()
+    }
+    P.add = () => {
+        let hb = new HashBuilder(hash)
+        hb.bitOp(0, 220, HashBuilder.Or, 1, 0.03)
         hb.done()
     }
     P.strong = () => {
@@ -399,6 +410,18 @@ function seedRNG() {
     noiseSeed(P.rndseed)
     simplex = new SimplexNoise(P.rndseed)
 
+    if (bitstring != '') {
+        // bitstring will be like 1000110100101101
+        // parse it into hash using hb twoD
+        let hb = new HashBuilder()
+        print(bitstring.length)
+        for (let i = 0; i < bitstring.length; i++) {
+            // print(i, hb.twoD(i % 28, floor(i / 28)))
+            hb.bits[hb.twoD(i % 28, floor(i / 28))] = parseInt(bitstring[i])
+        }
+        hb.done()
+        bitstring = ''
+    }
 
 }
 
@@ -413,7 +436,7 @@ function generateHash() {
     hb.setRndseed(0)
     // hb.manyRects(n = 1000, m = 100, s = 4)
     hb.symmetry()
-    // hb.bitFlip(0, 220, 0.1)
+    hb.bitFlip(0, 220, 0.2)
     hb.done()
     return hash
 }
@@ -603,9 +626,17 @@ class HashBuilder {
         return this;
     }
 
+    bitOp(a, b, op, operand, prob) {
+        for (let i = 0; i < b; i++) {
+            if (Math.random() < prob) {
+                this.bits[i] = op(this.bits[i], operand)
+            }
+        }
+    }
+
     bitFlip(a = 0, b = 220, prob = 0.5) {
         for (let i = a; i < b; i++) {
-            this.bits[i] = rnd() < prob ? !this.bits[i] : this.bits[i]
+            this.bits[i] = Math.random() < prob ? !this.bits[i] : this.bits[i]
         }
         return this;
     }
