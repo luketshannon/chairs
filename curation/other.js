@@ -151,6 +151,23 @@ let permanentParams = () => {
     P.full = () => {
         bits = bits.map(_ => 1)
     }
+    P.copyToAll = () => {
+        let hb = new HashBuilder(hash)
+        hb.symmetry(false)
+        hb.done()
+    }
+    P.permute = () => {
+        let hb = new HashBuilder(hash)
+        hb.bitFlip(0, 220, 0.1)
+        hb.done()
+    }
+    P.strong = () => {
+        let hb = new HashBuilder(hash)
+        let strongHash = '0x0ff000000f00000f900000f900000f9000001800003e40000060000600709f30'
+        let hbStrong = new HashBuilder(strongHash)
+        hb.or(hbStrong)
+        hb.done()
+    }
 
     P.save = savePaperSVG
     P.reload = reload
@@ -391,7 +408,8 @@ function generateHash() {
     // hb.toggleBackground()
     hb.toggleFilled()
     hb.toggleProject()
-    hb.setInk('#abcdef')
+    let ink = '#' + floor(rnd(0, 0xffffff)).toString(16).padStart(6, '0')
+    hb.setInk(ink)
     hb.setRndseed(0)
     // hb.manyRects(n = 1000, m = 100, s = 4)
     hb.symmetry()
@@ -423,9 +441,9 @@ class HashBuilder {
     }
 
     // randomize the first row and have every row mirror that one
-    symmetry() {
-        this.bitFlip(0, 220, 0.5)
-        let effects = [HashBuilder.Copy]
+    symmetry(flip = true) {
+        if (flip)
+            this.bitFlip(0, 220, 0.5)
         for (let i = 1; i < 8; i++) {
             for (let j = 0; j < 28; j++) {
                 this.bits[this.twoD(j, i)] = this.bits[this.twoD(j, 0)]
@@ -538,14 +556,14 @@ class HashBuilder {
         if (x > 27) throw 'x > 27'
         if (y > 7) throw 'y > 7'
         let idx = x + y * 28
-        if (idx == 148) idx = 118
-        if (idx > 148) idx--
-        if (idx == 149) idx = 117
-        if (idx > 149) idx--
+        if (idx == 149) idx = 118
+        // if (idx > 149) idx--
+        if (idx == 150) idx = 117
+        if (idx > 150) idx -= 2
         if (idx == 203) idx = 172
-        if (idx > 203) idx--
+        // if (idx > 203) idx--
         if (idx == 204) idx = 171
-        if (idx > 204) idx--
+        if (idx > 204) idx -= 2
         return idx
     }
 
