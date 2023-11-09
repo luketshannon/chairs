@@ -1,11 +1,10 @@
 // TODO
 
 
-// algorithm for new chairs
-// finalize projection sizes
-
-// finalize interactivity
+// algorithm for new chairs / tools to speed up search
 // finalize joinery
+
+// finalize interactivity/animation
 // perfect scalability
 
 let svgwidthin = 4 * 12
@@ -22,24 +21,24 @@ function setupParams() {
     P.background = bools[Bbg]
     P.filled = bools[Bf]
     P.project = bools[Bp]
-    P.outlines = P.outlines ?? false
+    P.outlines = P.outlines ?? true
 
     P.length = 18
     P.woodWidth = 0.8028
 
-    P.x = -90 * 0.005
-    P.y = 0
+    P.x = P.x ?? -90 * 0.005
+    P.y = P.y ?? 0
 
     P.randomLayout = randomLayout
     P.gridWidth = W / 10
 
-    P.interactive = true
+    P.interactive = P.interactive ?? false
 
     if (firstSetup)
         gui.myadds(P)
 }
 
-let faces, polys, baked, projections, outlines, attrs
+let faces, polys, baked, projections, projectionsStart, outlines, attrs
 let firstSetup = true
 function setup() {
     faces = []
@@ -47,6 +46,7 @@ function setup() {
     attrs = undefined
     baked = undefined
     projections = undefined
+    projectionsStart = []
     outlines = undefined
     if (firstSetup) {
         setupPaperCanvas()
@@ -55,7 +55,7 @@ function setup() {
     setupParams()
     firstSetup = false
 
-    getPolysFromSVG('all-all-colors-fixed3.svg').then(groups => {
+    getPolysFromSVG('all-all-colors-fixed5.svg').then(groups => {
         let rightMost = groups.reduce((acc, group) => {
             let right = group.reduce((acc, poly) => {
                 return Math.max(acc, poly.bbr)
@@ -96,8 +96,9 @@ function setup() {
     }).then(() => {
         [baked, projections, outlines] = solve(polys, faces)
         baked = baked.map(path => {
-            if (path != undefined) return path
-            else return new paper.Path()
+            path = path ?? new paper.Path()
+            path.applyMatrix = false
+            return path
         })
         projections = projections.map(path => {
             if (path != undefined) return path
@@ -150,13 +151,18 @@ function draw() {
             path.strokeColor = P.background ? '#ffffff' : P.ink
             if (!P.filled) path.remove()
         })
-        projections.forEach(path => {
+        projections.forEach((path, i) => {
             path.strokeColor = "#ffffff"
             path.fillColor = P.ink
         })
         let { tops, bots, orientations } = project(projections)
 
-        let allSides = projections.map((path, i) => [orientations[i], path, tops[i], bots[i]])
+        let allSides = projections.map((path, i) => {
+            if (projectionsStart.length) {
+                path = projectionsStart[i]
+            }
+            return [orientations[i], path, tops[i], bots[i]]
+        })
         let right = allSides[4]
         let left = allSides[5]
         let other = [allSides[0], allSides[1], allSides[2], allSides[3]]
@@ -169,7 +175,9 @@ function draw() {
             allSides = [left, ...other, right]
         }
         // P.x += 0.01
-        let distance = 1//mouseX / W//1 - constrain(dist(windowWidth / 2, windowHeight / 2, mouseX, mouseY) / W, 0, 1)
+        // P.y += 0.01
+        let distance = mouseX / W//1 - constrain(dist(windowWidth / 2, windowHeight / 2, mouseX, mouseY) / W, 0, 1)
+        if (!P.interactive) distance = 1
 
         // tween doubled up baked paths with tops and bots
         allSides.map(([orientation, path, top, bot], i) => {
@@ -202,11 +210,13 @@ function draw() {
                 pathbot.bringToFront()
                 quads.forEach(quad => quad.bringToFront())
                 pathtop.fillColor = '#e3c396'
+                pathtop.strokeColor = '#ffffff'
                 pathtop.bringToFront()
             } else {
                 pathtop.bringToFront()
                 quads.forEach(quad => quad.bringToFront())
                 pathbot.bringToFront()
+                pathbot.strokeColor = '#ffffff'
                 pathbot.fillColor = P.ink
             }
         })
@@ -372,15 +382,15 @@ function verifyJoinery(polys) {
 function project(baked) {
     let bakeTransforms = {
         //   x   y   z  rx ry rz
-        0: [0, -40, 0, -PI / 2 - 5 / 180 * PI, 0, 0], //seat
-        1: [0, -210, 185, 5 / 180 * PI, PI, 0], //back
-        2: [0, 155, -200, 0, 0, 0], // front
-        3: [0, 170, 185, -5 / 180 * PI, PI, 0], // skirt
-        4: [-210, 0, 0, 0, PI / 2, 0], // right side
-        5: [210, 0, 0, 0, -PI / 2, 0], // left side
+        0: [0, 0, 0, -PI / 2 - 5 / 180 * PI, 0, 0], //seat
+        1: [0, -137, 190, 5 / 180 * PI, PI, 0], //back
+        2: [0, 190, -186, 0, 0, 0], // front
+        3: [0, 205, 195, -5 / 180 * PI, PI, 0], // skirt
+        4: [-206, 55, 10, 0, PI / 2, 0], // right side
+        5: [206, 55, 10, 0, -PI / 2, 0], // left side
     }
 
-    function projectPiece(piece, tx = 0, ty = 0, tz = 0, rx = 0, ry = 0, rz = 0, reverseInk = false) {
+    function projectPiece(com, piece, tx = 0, ty = 0, tz = 0, rx = 0, ry = 0, rz = 0, reverseInk = false) {
         tx *= S
         ty *= S
         tz *= S
@@ -389,9 +399,12 @@ function project(baked) {
         // rz *= S
 
         let zoff = 8 * S
-        //increase size by 1.3
+        // increase size by 1.3
+
         let top = piece.clone()
-        top.position = new paper.Point(0, 0)
+        // top.position = new paper.Point(0, 0)
+        top.translate(-com.x, -com.y)
+        // top.position.translate()
         let bot = top.clone()
         let topMatrix = getMatrix(vec(0, 0), tx, ty, tz, rx, ry, rz, zoff)
         let botMatrix = getMatrix(vec(0, 0), tx, ty, tz, rx, ry, rz, -zoff)
@@ -408,35 +421,11 @@ function project(baked) {
         let topTransformation = new paper.Point(topMatrix[0][3], topMatrix[1][3])
         let botTransformation = new paper.Point(botMatrix[0][3], botMatrix[1][3])
 
-        // function projectCamera(v) {
-        // let fov = 2500
-        //     let z = v.z + fov
-        //     let x = (v.x - W / 2) * fov / z + W / 2
-        //     let y = (v.y - H / 2) * fov / z + H / 2
+        top.translate(topTransformation)
+        bot.translate(botTransformation)
+        top.translate(W / 2, H / 2)
+        bot.translate(W / 2, H / 2)
 
-        //     // return vec(v.x, v.y) //orthographic
-        //     return vec(x, y)
-        // }
-        // let fov = 2500
-        // let z = topMatrix[2][3] + fov
-        // let x = (topMatrix[0][3]) * fov / z
-        // let y = (topMatrix[1][3]) * fov / z
-        // top.matrix.append(new paper.Matrix(1, 0, 0, 1, x, y))
-
-        // z = botMatrix[2][3] + fov
-        // x = (botMatrix[0][3]) * fov / z
-        // y = (botMatrix[1][3]) * fov / z
-        // bot.matrix.append(new paper.Matrix(1, 0, 0, 1, x, y))
-
-        top.position = top.position.add(topTransformation)
-        bot.position = bot.position.add(botTransformation)
-        top.position = top.position.add(W / 2, H / 2)
-        bot.position = bot.position.add(W / 2, H / 2)
-
-        // top.strokeColor = 'red'//P.inkStrokeWhite ? '#ffffff' : P.ink
-        // top.fillColor = P.ink
-        // bot.strokeColor = 'red'//P.inkStrokeWhite ? '#ffffff' : P.ink
-        // bot.fillColor = P.ink
 
         return { top, bot, orientation }
     }
@@ -445,8 +434,13 @@ function project(baked) {
     let bots = []
     let orientations = []
     baked.map((piece, i) => {
+        // get center of mass of all faces
+        let com = faces[i].reduce((acc, poly) => {
+            return acc.add(poly.centerOfMass())
+        }, vec(0, 0))
+        com = com.div(faces[i].length)
         let transform = bakeTransforms[i]
-        let { top, bot, orientation } = projectPiece(piece, ...transform, reverseInk = false)
+        let { top, bot, orientation } = projectPiece(com, piece, ...transform, reverseInk = false)
         bot.bringToFront()
         top.bringToFront()
 
@@ -679,14 +673,15 @@ function randomLayout() {
     //     paper.project.activeLayer.addChild(path)
     // })
 
+    projectionsStart = []
     baked.forEach((path, i) => {
-
         let match = mapping.find(pair => pair[1] == i)
         path.rotate(match[0].rotation)
         path.position = match[0].position
-
-        // projections[i].position = match[0].position
-        // projections[i].rotate(match[0].rotation)
+        projectionStart = projections[i].clone()
+        projectionStart.position = match[0].position
+        projectionStart.rotate(match[0].rotation)
+        projectionsStart.push(projectionStart)
     })
 }
 
@@ -735,8 +730,7 @@ function removeContainedSubpaths(compoundPath) {
 }
 
 function mouseDragged() {
-    if (P.interactive) {
-        P.x += (mouseX - pmouseX) * 0.005
-        P.y += (mouseY - pmouseY) * 0.005
-    }
+    P.x += (mouseX - pmouseX) * 0.005
+    P.y += (mouseY - pmouseY) * 0.005
 }
+

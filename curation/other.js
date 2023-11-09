@@ -381,16 +381,21 @@ function seedRNG() {
     randomSeed(P.rndseed)
     noiseSeed(P.rndseed)
     simplex = new SimplexNoise(P.rndseed)
+
+
 }
 
 function generateHash() {
     let hb = new HashBuilder()
-    hb.bitFlip(0, 220, 0.5)
-    hb.toggleBackground()
+    hb.bitFlip(0, 220, 0)
+    // hb.toggleBackground()
     hb.toggleFilled()
     hb.toggleProject()
     hb.setInk('#abcdef')
     hb.setRndseed(0)
+    // hb.manyRects(n = 1000, m = 100, s = 4)
+    hb.symmetry()
+    // hb.bitFlip(0, 220, 0.1)
     hb.done()
     return hash
 }
@@ -415,6 +420,133 @@ class HashBuilder {
             this.rndseed = 0
             this.ink = '#000000'
         }
+    }
+
+    // randomize the first row and have every row mirror that one
+    symmetry() {
+        this.bitFlip(0, 220, 0.5)
+        let effects = [HashBuilder.Copy]
+        for (let i = 1; i < 8; i++) {
+            for (let j = 0; j < 28; j++) {
+                this.bits[this.twoD(j, i)] = this.bits[this.twoD(j, 0)]
+            }
+        }
+    }
+
+    // call rect with random effects but only with random rows of 1x8 and columns of 8x1
+    rowsColumns(rowN, columnN, effects) {
+        let rects = []
+        for (let i = 0; i < rowN; i++) {
+            let x = 0
+            let y = rnd(0, 8)
+            let w = 28
+            let h = 1
+            let x2 = 0
+            let y2 = rnd(0, 8)
+            let w2 = 28
+            let h2 = 1
+            let effect = rnd(effects)
+            rects.push([effect, x, y, w, h, x2, y2, w2, h2])
+        }
+        for (let i = 0; i < columnN; i++) {
+            let x = rnd(0, 28)
+            let y = 0
+            let w = 1
+            let h = 8
+            let x2 = rnd(0, 28)
+            let y2 = 0
+            let w2 = 1
+            let h2 = 8
+            let effect = rnd(effects)
+            rects.push([effect, x, y, w, h, x2, y2, w2, h2])
+        }
+        //shuffle
+        rects = rects.sort(() => rnd() - 0.5)
+        rects.map(r => this.rect(...r))
+    }
+
+    static Or(a, b) { return a || b }
+    static And(a, b) { return a && b }
+    static Xor(a, b) { return a != b }
+    static Copy(a, b) { return a }
+    static Not(a, b) { return !a }
+    static Fill(a, b) { return 1 }
+    static Empty(a, b) { return 0 }
+
+    rect(effect, x, y, w, h, x2, y2, w2, h2) {
+        x = floor(x)
+        y = floor(y)
+        w = floor(w)
+        h = floor(h)
+        x2 = floor(x2)
+        y2 = floor(y2)
+        w2 = floor(w2)
+        h2 = floor(h2)
+
+
+
+        let source = []
+        for (let i = x; i < x + w; i++) {
+            for (let j = y; j < y + h; j++) {
+                source.push(this.bits[this.twoD(i, j)])
+            }
+        }
+        let dest = []
+        for (let i = x2; i < x2 + w2; i++) {
+            for (let j = y2; j < y2 + h2; j++) {
+                dest.push(this.bits[this.twoD(i, j)])
+                // this.bits[this.twoD(i, j)] = values.shift()
+            }
+        }
+        let values = source.map((v, i) => effect(v, dest[i]))
+        for (let i = x2; i < x2 + w2; i++) {
+            for (let j = y2; j < y2 + h2; j++) {
+                this.bits[this.twoD(i, j)] = values.shift()
+            }
+        }
+
+        return this;
+    }
+
+    manyRects(n, m, s) {
+        n = n ?? rnd(1, 10)
+        m = m ?? rnd(1, 10)
+        s = s ?? rnd(1, 10)
+        let oppool = [HashBuilder.Fill, HashBuilder.Empty]
+        // let weights = new Array(oppool.length).fill(0).map(e => rnd())
+        let ops = []
+        for (let i = 0; i < m; i++) {
+            ops.push(rnd(oppool))
+            // ops.push(weightedPick(oppool, [...weights]))
+        }
+        let rects = []
+        for (let i = 0; i < n; i++) {
+            let w = rnd(4, s)
+            let h = rnd(4, 8)
+            let x = rnd(0, 28 - w)
+            let y = rnd(0, 9 - h)
+            let x2 = rnd(0, 28 - w)
+            let y2 = rnd(0, 9 - h)
+            rects.push([rnd(ops), x, y, w, h, x2, y2, w, h])
+        }
+        rects.map(r => this.rect(...r))
+    }
+
+    twoD(x, y) {
+        if (x < 0) throw 'x < 0'
+        if (y < 0) throw 'y < 0'
+        if (x > 27) throw 'x > 27'
+        if (y > 7) throw 'y > 7'
+        let idx = x + y * 28
+        if (idx == 148) idx = 118
+        if (idx > 148) idx--
+        if (idx == 149) idx = 117
+        if (idx > 149) idx--
+        if (idx == 203) idx = 172
+        if (idx > 203) idx--
+        if (idx == 204) idx = 171
+        if (idx > 204) idx--
+        return idx
     }
 
     shiftLeft(n) {
@@ -484,17 +616,25 @@ class HashBuilder {
     }
 
     validate() {
-        if (this.bits.length != 220 ||
-            this.bools.length != 8 ||
-            this.ink.length != 7 ||
-            this.rndseed < 0 ||
-            this.rndseed > 15 ||
-            this.bits.some(b => b != 0 && b != 1) ||
-            this.bools.some(b => b != 0 && b != 1) ||
-            !this.ink.startsWith('#')
-        ) {
-            throw 'hash error'
-        }
+        // if (this.bits.length != 220 ||
+        //     this.bools.length != 8 ||
+        //     this.ink.length != 7 ||
+        //     this.rndseed < 0 ||
+        //     this.rndseed > 15 ||
+        //     this.bits.some(b => b != 0 && b != 1) ||
+        //     this.bools.some(b => b != 0 && b != 1) ||
+        //     !this.ink.startsWith('#')
+        // ) {
+        //     throw 'hash error'
+        // }
+        if (this.bits.length != 220) throw "bits length error"
+        if (this.bools.length != 8) throw "bools length error"
+        if (this.ink.length != 7) throw "ink length error"
+        if (this.rndseed < 0) throw "rndseed error"
+        if (this.rndseed > 15) throw "rndseed error"
+        if (this.bits.some(b => b != 0 && b != 1)) throw "bits error"
+        if (this.bools.some(b => b != 0 && b != 1)) throw "bools error"
+        if (!this.ink.startsWith('#')) throw "ink error"
     }
 
     done() {
@@ -506,4 +646,12 @@ class HashBuilder {
         hashPack()
     }
 
+}
+
+function weightedPick(picked, weights) {
+    let i;
+    for (i = 0; i < weights.length; i++) weights[i] += weights[i - 1] || 0;
+    var e = rnd() * weights[weights.length - 1];
+    for (i = 0; i < weights.length && !(weights[i] >= e); i++);
+    return picked[i];
 }
