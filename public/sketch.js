@@ -186,7 +186,7 @@ function draw() {
 
     baked.forEach(path => {
         path.strokeColor = P.background ? '#ffffff' : P.ink
-        path.fillColor = P.filled ? P.ink : '#ffffff'
+        path.fillColor = P.filled ? '#ffffff' : P.ink
         paper.project.activeLayer.addChild(path)
     })
 
