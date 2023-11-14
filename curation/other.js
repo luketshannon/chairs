@@ -41,6 +41,8 @@ function hashPack() {
     // print(P.background)
     bools[Bf] = P.filled ?? bools[Bf]
     bools[Bp] = P.project ?? bools[Bp]
+    bools[Bi] = P.interactive ?? bools[Bi]
+
     // print(bools)
     let binaryString = bits.map(b => b ? 1 : 0).join('') + bools.map(b => b ? 1 : 0).join('')
     let hexString = ''
@@ -174,10 +176,17 @@ let permanentParams = () => {
     }
     P.strong = () => {
         let hb = new HashBuilder(hash)
-        let strongHash = '0x0ff000000f00000f900000f900000f9000001800003e40000060000600709f30'
-        let hbStrong = new HashBuilder(strongHash)
-        hb.or(hbStrong)
+        hb.strong()
         hb.done()
+    }
+    P.randomInk = () => {
+        let hb = new HashBuilder(hash)
+        hb.setInk('#' + floor(Math.random() * 0xffffff).toString(16).padStart(6, '0'))
+        hb.done()
+    }
+    P.resetRotation = () => {
+        P.x = -PI / 8
+        P.y = PI / 12
     }
 
     P.save = savePaperSVG
@@ -406,15 +415,16 @@ function seedRNG() {
     P.ink = ink
     P.rndseed = rndseed
 
-    randomSeed(P.rndseed)
-    noiseSeed(P.rndseed)
-    simplex = new SimplexNoise(P.rndseed)
+    let colorSeed = parseInt(ink.slice(1), 16)
+    randomSeed(P.rndseed * colorSeed)
+    noiseSeed(P.rndseed * colorSeed)
+    simplex = new SimplexNoise(P.rndseed * colorSeed)
 
     if (bitstring != '') {
         // bitstring will be like 1000110100101101
         // parse it into hash using hb twoD
         let hb = new HashBuilder()
-        print(bitstring.length)
+        // print(bitstring.length)
         for (let i = 0; i < bitstring.length; i++) {
             // print(i, hb.twoD(i % 28, floor(i / 28)))
             hb.bits[hb.twoD(i % 28, floor(i / 28))] = parseInt(bitstring[i])
@@ -428,15 +438,25 @@ function seedRNG() {
 function generateHash() {
     let hb = new HashBuilder()
     hb.bitFlip(0, 220, 0)
-    // hb.toggleBackground()
-    hb.toggleFilled()
-    hb.toggleProject()
+    if (Math.random() < 0.5) hb.toggleBackground()
+    if (Math.random() < 0.333) hb.toggleFilled()
+    if (Math.random() < 0.8) hb.toggleProject()
+    if (hb.bools[Bp] && Math.random() < 0.4) hb.toggleInteractive()
+    if (hb.bools[Bbg] && hb.bools[Bf] && hb.bools[Bp] && Math.random() < 0.9) hb.toggleFilled()
     let ink = '#' + floor(rnd(0, 0xffffff)).toString(16).padStart(6, '0')
     hb.setInk(ink)
-    hb.setRndseed(0)
-    // hb.manyRects(n = 1000, m = 100, s = 4)
-    hb.symmetry()
-    hb.bitFlip(0, 220, 0.2)
+    // hb.setInk('#abcdef')
+    hb.setRndseed(1 * parseInt(ink.slice(1), 16))
+    // hb.manyRects(n = 1000, m = 100, s=  4)
+    hb.bitFlip(0, 220, 0.5)
+    for (let i = 0; i < rnd(10); i++) {
+        hb.squareCopy(0)
+        print(1)
+    }
+    hb.symmetry(flip = false)
+
+    hb.strong()
+    hb.bitFlip(0, 220, rnd(0, 0.1))
     hb.done()
     return hash
 }
@@ -444,6 +464,7 @@ function generateHash() {
 let Bbg = 0
 let Bf = 1
 let Bp = 2
+let Bi = 3
 
 class HashBuilder {
     constructor(hash) {
@@ -472,6 +493,13 @@ class HashBuilder {
                 this.bits[this.twoD(j, i)] = this.bits[this.twoD(j, 0)]
             }
         }
+    }
+    strong(remove = 0.2) {
+        let strongHash = '0x0ff000000f00000f900000f900000f9000001800003e40000060000600709f30'
+        let hbStrong = new HashBuilder(strongHash)
+        hbStrong.bitOp(0, 220, HashBuilder.And, 0, remove)
+        this.or(hbStrong)
+        return this
     }
 
     // call rect with random effects but only with random rows of 1x8 and columns of 8x1
@@ -513,6 +541,81 @@ class HashBuilder {
     static Not(a, b) { return !a }
     static Fill(a, b) { return 1 }
     static Empty(a, b) { return 0 }
+
+    squareCopy(row, from, to) {
+        let sq1 = [5, 6, 2, 1, 14, 22, 13, 21]
+        let sq2 = [2, 7, 8, 3, 23, 16, 24, 15]
+        let sq3 = [4, 3, 9, 10, 17, 25, 18, 26]
+        let sq4 = [12, 1, 4, 11, 28, 19, 27, 20]
+
+        let sqMap = {
+            0: sq1,
+            1: sq2,
+            2: sq3,
+            3: sq4,
+        }
+        let face = []
+
+        from = from ?? floor(rnd(0, 4))
+        to = to ?? floor(rnd(0, 4))
+
+        let fromSq = sqMap[from]
+        let toSq = sqMap[to]
+
+        for (let i = 0; i < 8; i++) {
+            face.push(this.bits[this.twoD(fromSq[i] - 1, row)])
+        }
+
+        for (let i = 0; i < 8; i++) {
+            this.bits[this.twoD(toSq[i] - 1, row)] = face[i]
+        }
+    }
+
+    // squareReflect(row, sq, vertical = true) {
+    // }
+
+    rotateFace(row, n) {
+        for (let j = 0; j < n; j++) {
+            let rowMapping = {
+                1: 2,
+                2: 3,
+                3: 4,
+                4: 1,
+                5: 7,
+                6: 8,
+                7: 9,
+                8: 10,
+                9: 11,
+                10: 12,
+                11: 5,
+                12: 6,
+                13: 15,
+                14: 16,
+                15: 17,
+                16: 18,
+                17: 19,
+                18: 20,
+                19: 13,
+                20: 14,
+                21: 23,
+                22: 24,
+                23: 25,
+                24: 26,
+                25: 27,
+                26: 28,
+                27: 21,
+                28: 22,
+            }
+            let rowCopy = []
+            for (let i = 0; i < 8; i++) {
+                rowCopy.push(this.bits[this.twoD(row, i)])
+            }
+            for (let i = 0; i < 8; i++) {
+                this.bits[this.twoD(row, rowMapping[i + 1])] = rowCopy[i]
+            }
+        }
+    }
+
 
     rect(effect, x, y, w, h, x2, y2, w2, h2) {
         x = floor(x)
@@ -641,6 +744,11 @@ class HashBuilder {
         return this;
     }
 
+    toggleInteractive(on) {
+        if (on != undefined) this.bools[Bi] = on
+        else this.bools[Bi] = !this.bools[Bi]
+    }
+
     toggleProject(on) {
         if (on != undefined) this.bools[Bp] = on
         else this.bools[Bp] = !this.bools[Bp]
@@ -680,7 +788,7 @@ class HashBuilder {
         if (this.bools.length != 8) throw "bools length error"
         if (this.ink.length != 7) throw "ink length error"
         if (this.rndseed < 0) throw "rndseed error"
-        if (this.rndseed > 15) throw "rndseed error"
+        // if (this.rndseed > 15) throw "rndseed error"
         if (this.bits.some(b => b != 0 && b != 1)) throw "bits error"
         if (this.bools.some(b => b != 0 && b != 1)) throw "bools error"
         if (!this.ink.startsWith('#')) throw "ink error"

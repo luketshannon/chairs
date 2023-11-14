@@ -1,63 +1,82 @@
 // TODO
 
+// TODAY
 
-// algorithm for new chairs / tools to speed up search
-// finalize joinery
+// THIS WEEK
+// 1] perfect scalability
+// 2] bake svg to loaded file
 
-// finalize interactivity/animation
-// perfect scalability
 
 let svgwidthin = 4 * 12
 let svgheightin = 8 * 12
 let S = 1000
 
 const urlParams = new URLSearchParams(window.location.search);
-let hash = urlParams.get('hash') ?? ''
 
 let bitstring = urlParams.get('bits') ?? ''
+let hash = urlParams.get('hash') ?? ''
+let url_x = urlParams.get('x') ?? ''
+let url_y = urlParams.get('y') ?? ''
+let url_proj = urlParams.get('project') ?? ''
+let url_fill = urlParams.get('fill') ?? ''
+let url_bg = urlParams.get('bg') ?? ''
+let url_t = urlParams.get('t') ?? ''
+let url_int = urlParams.get('float') ?? ''
+let url_save = urlParams.get('save') ?? ''
+let url_rnd = urlParams.get('rnd') ?? ''
 
 let P = {}
 function setupParams() {
     permanentParams()
 
-    P.background = bools[Bbg]
-    P.filled = bools[Bf]
-    P.project = bools[Bp]
-    P.outlines = P.outlines ?? true
+    url_x = url_x ? float(url_x) : undefined
+    url_y = url_y ? float(url_y) : undefined
+    url_proj = url_proj ? int(url_proj) : undefined
+    url_fill = url_fill ? int(url_fill) : undefined
+    url_bg = url_bg ? int(url_bg) : undefined
+    url_t = url_t ? float(url_t) : undefined
+    url_int = url_int ? int(url_int) : undefined
+    url_save = url_save ? int(url_save) : undefined
+    url_rnd = url_rnd == '' ? 1 : int(url_rnd)
+    P.background = url_bg ?? bools[Bbg]
+    P.filled = url_fill ?? bools[Bf]
+    P.project = url_proj ?? bools[Bp]
+    P.interactive = url_int ?? bools[Bi]
+    P.outlines = P.outlines ?? false
 
-    P.length = 18
-    P.woodWidth = 0.8028
+    P.length = P.length ?? 18
+    P.woodWidth = P.woodWidth ?? 0.74 // 0.802
 
-    P.x = P.x ?? -90 * 0.005
-    P.y = P.y ?? 0
+    P.x = url_x ?? P.x ?? -90 * 0.005
+    P.y = url_y ?? P.y ?? 0
 
     P.randomLayout = randomLayout
-    P.gridWidth = W / 10
-
-    P.interactive = P.interactive ?? false
+    P.gridWidth = P.gridWidth ?? W / 8
 
     if (firstSetup)
         gui.myadds(P)
 }
 
-let faces, polys, baked, projections, projectionsStart, outlines, attrs
+let faces, polys, baked, projections, projectionsStart, attrs, layouts
 let firstSetup = true
 function setup() {
     faces = []
     polys = []
+    layouts = []
     attrs = undefined
     baked = undefined
     projections = undefined
     projectionsStart = []
-    outlines = undefined
     if (firstSetup) {
         setupPaperCanvas()
+        console.log('thank you to https://p5js.org/, http://paperjs.org/, and all the people involved whose code and love this is built on top of <3 <3 <3')
     }
     setupRandom()
     setupParams()
     firstSetup = false
+    frameRate(60)
 
-    getPolysFromSVG('all-all-colors-fixed5.svg').then(groups => {
+    getPolysFromSVG('all-all-colors-fixed-copy2.svg').then(groups => {
         let rightMost = groups.reduce((acc, group) => {
             let right = group.reduce((acc, poly) => {
                 return Math.max(acc, poly.bbr)
@@ -96,37 +115,65 @@ function setup() {
             }
         })
     }).then(() => {
-        [baked, projections, outlines] = solve(polys, faces)
+        [baked, projections, layouts] = solve(polys, faces)
         baked = baked.map(path => {
             path = path ?? new paper.Path()
             path.applyMatrix = false
             return path
         })
         projections = projections.map(path => {
+            projections.applyMatrix = false
             if (path != undefined) return path
             else return new paper.Path()
         })
-        baked = baked.map(path => simplifyCollinear(path))
+        baked = baked.map(path => simplifyCollinear(path, 1 * S))
+        layouts = layouts.map(path => simplifyCollinear(path, 10 * S))
+        baked.map(path => path.applyMatrix = false)
     }).then(() => {
+        if (url_rnd == 1) {
+
+            randomLayout()
+        }
         loop()
     })
 
     noLoop()
 }
 
-// let mapping = []
+
 function draw() {
+    // print(frameRate() < 46 ? frameCount : 0)
     if (!isLooping()) {
         return
+    }
+
+    if (randomDone && url_rnd) {
+
+        randomLayout()
     }
 
     paper.project.clear()
 
     let margin = 2 * S
-    let bg = new paper.Path.Rectangle(margin, margin, W - margin * 2, H - margin * 2)
+    let bg = new paper.Shape.Rectangle(margin, margin, W - margin * 2, H - margin * 2)
 
     bg.fillColor = P.background ? P.ink : '#ffffff'//P.ink
+    bg.strokeColor = P.background ? '#ffffff' : P.ink
     bg.strokeWidth = margin
+
+    // let muted = (hexColor) => {
+    //     // use p5js color object
+    //     let c = color(hexColor)
+    //     colorMode(HSB, 360, 100, 100, 1)
+    //     let h = hue(c)
+    //     let s = saturation(c)
+    //     let b = brightness(c)
+    //     let a = alpha(c)
+    //     let muted = color(h, s, b * 0.5, a)
+    //     colorMode(RGB, 255, 255, 255, 1)
+    //     return muted
+    // }
+    document.body.style.backgroundColor = P.background ? P.ink : '#ffffff'//P.ink
 
     if (P.outlines) {
         polys.map(poly => {
@@ -141,13 +188,15 @@ function draw() {
         paper.project.activeLayer.addChild(path)
     })
 
+    // randomLayout()
+
     // mapping.map(pair => {
     //     pair[0].fillColor = '#ffffff'
     //     pair[0].strokeColor = P.ink
     //     paper.project.activeLayer.addChild(pair[0])
     // })
 
-    if (P.project) {
+    if (P.project && randomDone) {
         baked.forEach(path => {
             path.fillColor = '#ffffff'
             path.strokeColor = P.background ? '#ffffff' : P.ink
@@ -167,8 +216,17 @@ function draw() {
         })
         let right = allSides[4]
         let left = allSides[5]
-        let other = [allSides[0], allSides[1], allSides[2], allSides[3]]
+        let back = allSides[1]
+        let other = [allSides[0], back, allSides[2], allSides[3]]
         other = other.sort((a, b) => - a[0].shape[0].z + b[0].shape[0].z)
+
+        // // if (((P.y - 5 / 180 * PI) % TAU + TAU) % TAU > PI) {
+        // print(p5.Vector.dot(allSides[0][0].shape[1], vec(0, 0, 1)))
+        // if (p5.Vector.dot(allSides[0][0].shape[1], vec(0, 0, 1)) < 0) {
+        //     other = [back, ...other]
+        // } else {
+        //     other = [...other, back]
+        // }
 
         if ((P.x % TAU + TAU) % TAU > PI) {
             allSides = [right, ...other, left]
@@ -178,11 +236,26 @@ function draw() {
         }
         // P.x += 0.01
         // P.y += 0.01
-        let distance = mouseX / W//1 - constrain(dist(windowWidth / 2, windowHeight / 2, mouseX, mouseY) / W, 0, 1)
-        if (!P.interactive) distance = 1
+        // let distance = 1//mouseX / W//1 - constrain(dist(windowWidth / 2, windowHeight / 2, mouseX, mouseY) / W, 0, 1)
+        let t = url_t ?? frameCount
+        let distance = map(sn(t / 600, 1000), -1, 1, -0.05, 2)
+        if (P.interactive) {
+            P.x += sn(t / 600) / 50
+            P.y += sn(t / 600, 500) / 50
+        }
+
+        if (!P.interactive || !randomDone) {
+            // distance = oscillateWithCycle(t / 100, 5)
+            // distance = constrain(mouseX / W, 0, 1)
+            distance = 1
+            if (!mouseIsPressed)
+                P.x += 0.007
+        }
 
         // tween doubled up baked paths with tops and bots
         allSides.map(([orientation, path, top, bot], i) => {
+            path = path.clone()
+            path.applyMatrix = true
             // construction
             let pathbot = path.clone()
             paper.project.activeLayer.addChild(pathbot)
@@ -205,6 +278,7 @@ function draw() {
 
             // P.x += 0.002
             // P.y += 0.3
+
             // ordering
             let tol = 0
             let dot = pathtop.clockwise
@@ -212,6 +286,7 @@ function draw() {
                 pathbot.bringToFront()
                 quads.forEach(quad => quad.bringToFront())
                 pathtop.fillColor = '#e3c396'
+                // pathtop.fillColor = '#ffffff'
                 pathtop.strokeColor = '#ffffff'
                 pathtop.bringToFront()
             } else {
@@ -223,7 +298,13 @@ function draw() {
             }
         })
     }
+
     updatePathsStroke()
+    if (url_save && randomDone) {
+        savePaperSVG()
+        url_save = false
+        noLoop()
+    }
 }
 
 function updatePathsStroke() {
@@ -250,16 +331,25 @@ function updatePathsStroke() {
 function bake(faces, polys) {
     let bakes = []
     let projections = []
-    let outlines = polys.map(poly => {
-        let outline = new Poly(poly.shape, 0, 0, 1 * P.length / 18, 0, 1)
-        return outline
-    })
+    let layouts = []
+    // let layouts = polys.map(poly => {
+    //     let layout = new Poly(poly.shape, 0, 0, 1 * P.length / 18 * 1.1, 0, 1)
+    //     return layout
+    // })
     faces.map(face => {
         let removals = []
         let united = new Poly([])
+        let layoutUnited = new Poly([])
         let projection = new Poly([])
         face.map(poly => {
             let outline = new Poly(poly.shape, 0, 0, 1 * P.length / 18, 0, 1)
+            // take each poly, transform it to 0,0 by it's center of mass, scale it up by 1.1, and transform it back to original position
+            let layout = new Poly(poly.shape, 0, 0, 1 * P.length / 18, 0, 1)
+            layout = layout.expandRect(12 * S, 12 * S)
+            // let com = poly.centerOfMass()
+            // let layout = new Poly(poly.shape, -com.x, -com.y, 1, 0, 1)
+            // layout = new Poly(layout.shape, 0, 0, 1 * P.length / 18 * 1.3, 0, 1)
+            // layout = new Poly(layout.shape, com.x, com.y, 1, 0, 1)
             if (poly.on) {
                 if (!poly.removal && !poly.joint) {
                     projection = projection.unite(outline)
@@ -269,17 +359,23 @@ function bake(faces, polys) {
                     return
                 }
                 united = united.unite(outline)
+                layoutUnited = layoutUnited.unite(layout)
             }
         })
-        removals.map(outline => {
-            outline = outline.expandRect(P.woodWidth / (23 / 32), P.woodWidth / (23 / 32))
-            united = united.subtract(outline)
+        removals.map(removal => {
+            removal = removal.expandRect(P.woodWidth / (23 / 32), P.woodWidth / (23 / 32))
+            united = united.subtract(removal)
         })
+
+
+        let rasterFixPoly = Poly.rect(740 * S, 435 * S, 450 * S, 30 * S)
+        projection.subtract(rasterFixPoly)
 
         bakes.push(united.path)
         projections.push(projection.path)
+        layouts.push(layoutUnited.path)
     })
-    return [bakes, projections, outlines]
+    return [bakes, projections, layouts]
 }
 
 function selectStyle(polys, obj, requireAll = true) {
@@ -335,8 +431,16 @@ function verifyJoinery(polys) {
             if (oppSWMatches.length) {
                 let weightMatch = selectStyle(joints, { sw: relations[poly.sw + relations[poly.sw][0]] })
                 let correctJoint
-                if (c == '#EF4136' || c == '#00A651') {
+                //D7DF23 // 00AEEF
+                //2E3192
+                // if (c == '#EF4136' || c == '#00A651') {
+                // if (c == '#2E3192' || c == '#00AEEF') {
+                if (c == '#D7DF23') {
                     correctJoint = selectStyle(weightMatch, { sc: [c] })
+                    // print('green', correctJoint)
+                } else if (c == '#2E3192') {
+                    correctJoint = selectStyle(weightMatch, { sc: [c] })
+                    // print('blue', correctJoint)
                 } else {
                     correctJoint = selectStyle(weightMatch, { sc: [c], c: [c] }, requireAll = false)
                 }
@@ -488,41 +592,97 @@ function solve(polys, faces) {
     polys.map(poly => {
         if (poly.alpha == 0.75) poly.removal = true
     })
-    let [baked, projections, outlines] = bake(faces, polys)
-    return [baked, projections, outlines]
+    let [baked, projections, layouts] = bake(faces, polys)
+    return [baked, projections, layouts]
 }
-
-function simplifyCollinear(path) {
-    function isCollinear(p1, p2, p3, epsilon = 1e-6) {
-        let dx1 = p2.x - p1.x;
-        let dy1 = p2.y - p1.y;
-        let dx2 = p3.x - p2.x;
-        let dy2 = p3.y - p2.y;
-
-        let crossProduct = dx1 * dy2 - dy1 * dx2;
-        return Math.abs(crossProduct) < epsilon;
-    }
-    function simplifyPathSegments(path) {
-        for (let i = 0; i < path.segments.length - 2; i++) {
-            let p1 = path.segments[i].point;
-            let p2 = path.segments[i + 1].point;
-            let p3 = path.segments[i + 2].point;
-
-            if (isCollinear(p1, p2, p3)) {
-                path.segments[i + 1].remove();
-                i--;  // Decrement to re-check with next point after removal
-            }
-        }
-    }
+function simplifyCollinear(path, eps = 8 * S) {
     if (path instanceof paper.CompoundPath) {
+        // Handle compound paths
         for (let childPath of path.children) {
-            simplifyPathSegments(childPath);
+            simplifyPath(childPath, eps);
         }
     } else {
-        simplifyPathSegments(path);
+        // Handle simple paths
+        simplifyPath(path, eps);
     }
     return path
 }
+
+function simplifyPath(singlePath, eps) {
+    for (let i = singlePath.segments.length - 2; i > 0; i--) {
+        let point = singlePath.segments[i].point;
+        let prevPoint = singlePath.segments[i - 1].point;
+        let nextPoint = singlePath.segments[i + 1].point;
+
+        if (isPointCloseToLine(point, prevPoint, nextPoint, eps)) {
+            singlePath.removeSegment(i);
+        }
+    }
+}
+
+function isPointCloseToLine(point, lineStart, lineEnd, eps) {
+    let A = point.x - lineStart.x;
+    let B = point.y - lineStart.y;
+    let C = lineEnd.x - lineStart.x;
+    let D = lineEnd.y - lineStart.y;
+
+    let dot = A * C + B * D;
+    let len_sq = C * C + D * D;
+    let param = -1;
+    if (len_sq != 0) // in case of 0 length line
+        param = dot / len_sq;
+
+    let xx, yy;
+
+    if (param < 0) {
+        xx = lineStart.x;
+        yy = lineStart.y;
+    } else if (param > 1) {
+        xx = lineEnd.x;
+        yy = lineEnd.y;
+    } else {
+        xx = lineStart.x + param * C;
+        yy = lineStart.y + param * D;
+    }
+
+    let dx = point.x - xx;
+    let dy = point.y - yy;
+    return (dx * dx + dy * dy) <= (eps * eps);
+}
+
+// function simplifyCollinear(path) {
+//     function isCollinear(p1, p2, p3, epsilon = 1e-6) {
+//         let dx1 = p2.x - p1.x;
+//         let dy1 = p2.y - p1.y;
+//         let dx2 = p3.x - p2.x;
+//         let dy2 = p3.y - p2.y;
+
+//         let crossProduct = dx1 * dy2 - dy1 * dx2;
+//         return Math.abs(crossProduct) < epsilon;
+//     }
+//     function simplifyPathSegments(path) {
+//         for (let i = 0; i < path.segments.length - 2; i++) {
+//             let p1 = path.segments[i].point;
+//             let p2 = path.segments[i + 1].point;
+//             let p3 = path.segments[i + 2].point;
+
+//             if (isCollinear(p1, p2, p3)) {
+//                 path.segments[i + 1].remove();
+//                 i--;  // Decrement to re-check with next point after removal
+//             }
+//         }
+//     }
+//     if (path instanceof paper.CompoundPath) {
+//         for (let childPath of path.children) {
+//             simplifyPathSegments(childPath);
+//         }
+//     } else {
+//         simplifyPathSegments(path);
+//     }
+//     // path.simplify()
+//     // path.flatten()
+//     return path
+// }
 
 function connectVerticesWithQuad(path1, path2) {
     let quads = []
@@ -563,8 +723,74 @@ function connectTranslatedClones(clone1, clone2) {
     return quadsss
 }
 
-function randomLayout() {
-    pieces = baked
+// let randomReturn = { back: false }
+// let randomIters = 0
+
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+let randomDone = false
+let allRandom = []
+let mapping
+async function randomLayout() {
+
+    let margin = 15 * S
+    let canvasBounds = new paper.Rectangle(margin, margin, paper.view.size.width - margin * 2, paper.view.size.height - margin * 2);
+    let intersectsAny = (path, paths, andCanvas = true) => {
+        if (!path.bounds.intersects(canvasBounds) || !canvasBounds.contains(path.bounds)) {
+            return true
+        }
+        for (let other of paths) {
+            if (path.intersects(other)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    async function copyPaths(final = false) {
+
+        projectionsStart = []
+        mapping.forEach((match, i) => {
+            // print(i, match, baked, baked[match[1]])
+            // let match = mapping.find(pair => pair[1] == i)
+            let path = baked[match[1]]
+            path.applyMatrix = false
+            path.rotation = match[0].rotation
+            path.position = match[0].position
+            projectionStart = projections[i].clone()
+            projectionStart.applyMatrix = false
+            projectionStart.rotation = match[0].rotation
+            projectionStart.position = match[0].position.clone()
+            projectionsStart.push(projectionStart)
+            // make a circle and bring it to front in paperjs
+            // let circ = new paper.Path.Circle(match[0].position, 10)
+            // circ.fillColor = 'red'
+            // circ.strokeColor = 'red'
+            // circ.bringToFront()
+            // let circ2 = new paper.Path.Circle(projectionStart.position, 10)
+            // circ2.fillColor = 'green'
+            // circ2.strokeColor = 'green'
+            // circ2.bringToFront()
+            // noLoop()
+        })
+        if (final) {
+            let finalCheck = baked.map(path => intersectsAny(path, baked, andCanvas = true))
+            if (finalCheck.includes(true)) {
+                print('final check failed')
+                randomDone = false
+                await continuouslyTry()
+            }
+        }
+    }
+
+    if (randomDone) {
+        await copyPaths()
+        return
+    }
+
+    pieces = layouts
 
     let randomPaperPlace = (piece, x, y, w, h) => {
         let path = piece
@@ -578,19 +804,6 @@ function randomLayout() {
         return path
     }
 
-    let canvasBounds = new paper.Rectangle(0, 0, paper.view.size.width, paper.view.size.height);
-    let intersectsAny = (path, paths, andCanvas = true) => {
-        if (!path.bounds.intersects(canvasBounds) || !canvasBounds.contains(path.bounds)) {
-            return true
-        }
-        for (let other of paths) {
-            if (path.intersects(other)) {
-                return true
-            }
-        }
-        return false
-    }
-
     let shuffleSubarray = (arr, start, end) => {
         for (let i = end - 1; i > start; i--) {
             const j = Math.floor(rnd() * (i - start + 1)) + start;
@@ -599,14 +812,28 @@ function randomLayout() {
         return arr
     }
 
-    let allRandom = pieces.map(path => {
+    allRandom = pieces.map(path => {
+        if (path == undefined) return
         let filled = removeContainedSubpaths(path)
+        // filled.strokeColor = 'red'
+        // noLoop()
+        // paper.project.activeLayer.addChild(filled)
         filled.applyMatrix = false
         return filled
     })
-    let mapping = allRandom.map((path, i) => [path, i])
+    allRandom = allRandom.filter(path => path != undefined)
+
+    // allRandom.map(path => {
+    //     path.strokeColor = 'red'
+    //     path.bringToFront()
+    //     paper.project.activeLayer.addChild(path)
+    // })
+    // return
+
+    mapping = allRandom.map((path, i) => [path, i])
     mapping = mapping.sort((a, b) => a[0].bounds.area - b[0].bounds.area)
     allRandom = mapping.map(pair => pair[0])
+
 
     let subdivideGrid = (gridWidth) => {
         let gridRectangles = []
@@ -621,33 +848,52 @@ function randomLayout() {
     }
 
     let filterRectangles = (rectangles, path) => {
+        // print(path, rectangles, path.intersects, rectangles[0].intersects)
+        // print('this', rectangles[0] instanceof paper.Item)
+        // rectangles.map(rectangle => print(path.intersects(rectangle)))
+
         return rectangles.filter(rectangle => !path.intersects(rectangle))
     }
 
-    function placePaths(paths, gridWidth) {
+
+    let iters = 0;
+
+    async function placePaths(paths, gridWidth) {
         // Step 1: Initialize grid subdivision
         let gridRectangles = subdivideGrid(gridWidth);
+        // gridRectangles = shuffleSubarray(gridRectangles, 0, gridRectangles.length)
 
         // Step 2: Define recursive placement function
-        function placeNextPath(remainingPaths, availableRectangles, finalizedPaths) {
-            print(remainingPaths.length)
+        async function placeNextPath(remainingPaths, availableRectangles, finalizedPaths) {
+            iters++;
+            if (iters % 50 == 0) {
+                // print('pause!')
+                await copyPaths()
+                await delay(1);
+            }
+
             if (remainingPaths.length === 0) {
                 return true; // All paths placed
             }
+            // print(remainingPaths.length)
 
             // Step 3: Select a path and try to place it
             let path = remainingPaths.pop();
-            availableRectangles = shuffleSubarray(availableRectangles, 0, availableRectangles.length)
+            availableRectangles = shuffleSubarray(availableRectangles, 0, availableRectangles.length);
             for (let rectangle of availableRectangles) {
-                randomPaperPlace(path, rectangle.x, rectangle.y, rectangle.width, rectangle.height)
-                if (!intersectsAny(path, finalizedPaths)) {
-                    finalizedPaths.push(path)
-                    // Step 4: Filter out intersecting rectangles
-                    let newAvailableRectangles = filterRectangles(availableRectangles, path);
+                let iters = map((6 - remainingPaths.length) ** 2, 1, 36, 1, 10);
 
-                    // Step 5: Recursively place the next path
-                    if (placeNextPath([...remainingPaths], newAvailableRectangles, [...finalizedPaths])) {
-                        return true;
+                for (let i = 0; i < iters; i++) {
+                    randomPaperPlace(path, rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+
+                    if (!intersectsAny(path, finalizedPaths)) {
+                        finalizedPaths.push(path);
+                        // Step 4: Filter out intersecting rectangles
+                        let newAvailableRectangles = filterRectangles(availableRectangles, path.bounds);
+                        // Step 5: Recursively place the next path
+                        if (await placeNextPath([...remainingPaths], newAvailableRectangles, [...finalizedPaths])) {
+                            return true;
+                        }
                     }
                 }
             }
@@ -658,33 +904,39 @@ function randomLayout() {
         }
 
         // Step 7: Start the placement process
-        if (placeNextPath(paths, gridRectangles, [])) {
-            return paths; // Return successfully placed paths
-        } else {
-            return null; // Placement failed
-        }
-
+        return await placeNextPath(paths, gridRectangles, []);
     }
 
-    placePaths([...allRandom], P.gridWidth)
+    let continuouslyTry = async () => {
+        let success = false
+        while (!success) {
+            print('attempt')
+            success = await placePaths([...allRandom], P.gridWidth)
+            print('success', success)
+        }
+        print('success')
+        await copyPaths(final = true)
+    }
+    await continuouslyTry()
+    // // Usage example
+    // placePaths([...allRandom], P.gridWidth).then(result => {
+    //     if (result) {
+    //         copyPaths()
+    //     }
+    //     else {
+    //         print('failed')
+    //         placePaths
+    //     }
+    // });
 
 
     // allRandom.map(path => {
+    //     paper.project.activeLayer.addChild(path)
     //     path.fillColor = 'red'
     //     path.strokeColor = 'white'
-    //     paper.project.activeLayer.addChild(path)
+    //     path.bringToFront()
     // })
-
-    projectionsStart = []
-    baked.forEach((path, i) => {
-        let match = mapping.find(pair => pair[1] == i)
-        path.rotate(match[0].rotation)
-        path.position = match[0].position
-        projectionStart = projections[i].clone()
-        projectionStart.position = match[0].position
-        projectionStart.rotate(match[0].rotation)
-        projectionsStart.push(projectionStart)
-    })
+    randomDone = true
 }
 
 
@@ -716,9 +968,16 @@ function removeContainedSubpaths(compoundPath) {
     }
 
     // Remove the marked subpaths from the cloned compound path
+    // and make sure that the path's bounding box does not change, otherwise undo it
+    var oldBounds = compoundPathClone.bounds.clone();
     pathsToRemove.forEach(function (path) {
         path.remove();
     });
+    if (!oldBounds.equals(compoundPathClone.bounds)) {
+        print('not equal')
+        compoundPathClone = compoundPath;
+    }
+
 
     // After removal, if only one path is left, it's no longer a compound path.
     // Convert it to a simple Path.
@@ -737,17 +996,20 @@ function mouseDragged() {
 }
 
 function keyPressed() {
-    if (key == 't') {
-        P.randomLayout()
-    }
     if (key == 'w') {
-        P.project = !P.project
+        P.project = P.project ? false : true
+        setup()
+    }
+    if (key == 'g') {
+        P.background = P.background ? false : true
+        setup()
     }
     if (key == 'f') {
-        P.filled = !P.filled
+        P.filled = P.filled ? false : true
+        setup()
     }
     if (key == 'd') {
-        P.outlines = !P.outlines
+        P.outlines = P.outlines ? false : true
     }
     if (key == 's') {
         savePaperSVG()
@@ -757,7 +1019,7 @@ function keyPressed() {
         setup()
     }
     if (key == 'q') {
-        P.interactive = !P.interactive
+        P.interactive = P.interactive ? false : true
     }
     if (key == 'x') {
         P.clear()
@@ -766,5 +1028,12 @@ function keyPressed() {
     if (key == 'z') {
         P.full()
         setup()
+    }
+    if (key == 'b') {
+        P.randomInk()
+        setup()
+    }
+    if (key == 't') {
+        P.randomLayout()
     }
 } 
