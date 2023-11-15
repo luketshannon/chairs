@@ -154,7 +154,8 @@ function draw() {
         randomLayout()
     }
 
-    paper.project.clear()
+    // paper.project.clear()
+    paper.project.activeLayer.removeChildren()
 
     let margin = 2 * S
     let bg = new paper.Shape.Rectangle(margin, margin, W - margin * 2, H - margin * 2)
