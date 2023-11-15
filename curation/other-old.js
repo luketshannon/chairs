@@ -84,21 +84,20 @@ function hashUnpack(hash) {
 var gui = new dat.gui.GUI();
 
 
-function removeEmpty() {
-    for (var i = paper.project.activeLayer.children.length - 1; i >= 0; i--) {
-        var child = paper.project.activeLayer.children[i];
-        // Check if the child is a path or compound path with no stroke and no fill
-        if ((child instanceof paper.Path || child instanceof paper.CompoundPath) &&
-            !child.strokeColor && !child.fillColor) {
-            // Remove the child from the project
-            child.remove();
-        }
-    }
-}
-
 function savePaperSVG() {
     hashPack()
 
+    let removeEmpty = () => {
+        for (var i = paper.project.activeLayer.children.length - 1; i >= 0; i--) {
+            var child = paper.project.activeLayer.children[i];
+            // Check if the child is a path or compound path with no stroke and no fill
+            if ((child instanceof paper.Path || child instanceof paper.CompoundPath) &&
+                !child.strokeColor && !child.fillColor) {
+                // Remove the child from the project
+                child.remove();
+            }
+        }
+    }
 
     removeEmpty()
 
@@ -439,9 +438,9 @@ function seedRNG() {
 function generateHash() {
     let hb = new HashBuilder()
     hb.bitFlip(0, 220, 0)
-    if (Math.random() < 0.4) hb.toggleBackground()
-    if (Math.random() < 0.7) hb.toggleFilled()
-    if (Math.random() < 1) hb.toggleProject()
+    if (Math.random() < 0.5) hb.toggleBackground()
+    if (Math.random() < 0.333) hb.toggleFilled()
+    if (Math.random() < 0.8) hb.toggleProject()
     if (hb.bools[Bp] && Math.random() < 0.4) hb.toggleInteractive()
     if (hb.bools[Bbg] && hb.bools[Bf] && hb.bools[Bp] && Math.random() < 0.9) hb.toggleFilled()
     let ink = '#' + floor(rnd(0, 0xffffff)).toString(16).padStart(6, '0')
@@ -452,6 +451,7 @@ function generateHash() {
     hb.bitFlip(0, 220, 0.5)
     for (let i = 0; i < rnd(10); i++) {
         hb.squareCopy(0)
+        print(1)
     }
     hb.symmetry(flip = false)
 
