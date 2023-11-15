@@ -445,7 +445,7 @@ function generateHash() {
     colorMode(HSB)
     let c = color(rnd(360), rnd(0, 80), rnd(40, 90))
     let ink = c.toString('#rrggbb')
-    // let ink = '#' + floor(rnd(0, 0xffffff)).toString(16).padStart(6, '0')
+    if (Math.random() < 0.05) ink = '#' + floor(rnd(0, 0xffffff)).toString(16).padStart(6, '0')
 
     hb.setInk(ink)
     // hb.setInk('#abcdef')
