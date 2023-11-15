@@ -442,7 +442,11 @@ function generateHash() {
     if (Math.random() < 0.8) hb.toggleProject()
     if (hb.bools[Bp] && Math.random() < 0.4) hb.toggleInteractive()
     if (hb.bools[Bbg] && hb.bools[Bf] && hb.bools[Bp] && Math.random() < 0.9) hb.toggleFilled()
-    let ink = '#' + floor(rnd(0, 0xffffff)).toString(16).padStart(6, '0')
+    colorMode(HSB)
+    let c = color(rnd(360), rnd(0, 80), rnd(40, 90))
+    let ink = c.toString('#rrggbb')
+    // let ink = '#' + floor(rnd(0, 0xffffff)).toString(16).padStart(6, '0')
+
     hb.setInk(ink)
     // hb.setInk('#abcdef')
     hb.setRndseed(1 * parseInt(ink.slice(1), 16))

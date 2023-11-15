@@ -873,7 +873,7 @@ async function randomLayout() {
         // Step 2: Define recursive placement function
         async function placeNextPath(remainingPaths, availableRectangles, finalizedPaths) {
             iters++;
-            if (iters % 50 == 0) {
+            if (iters % 250 == 0) {
                 // print('pause!')
                 await copyPaths()
                 await delay(1);
