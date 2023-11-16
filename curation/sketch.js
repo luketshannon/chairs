@@ -206,7 +206,7 @@ function draw() {
     //     paper.project.activeLayer.addChild(pair[0])
     // })
 
-    if (P.project && randomDone) {
+    if (P.project && (randomDone || !url_rnd)) {
         baked.forEach(path => {
             path.fillColor = P.background ? P.ink : '#ffffff'
             path.strokeColor = P.background ? '#ffffff' : P.ink
