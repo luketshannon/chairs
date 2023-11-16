@@ -633,8 +633,10 @@ function solve(polys, faces) {
     return [baked, projections, layouts]
 }
 function simplifyCollinear(path, eps = 8 * S) {
+    if (!path) return path
     if (path instanceof paper.CompoundPath) {
         // Handle compound paths
+        if (!path.children.length) return path
         for (let childPath of path.children) {
             simplifyPath(childPath, eps);
         }
