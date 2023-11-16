@@ -42,7 +42,7 @@ function setupParams() {
     url_rnd = url_rnd === '' ? 1 : url_rnd === 0 ? 0 : int(url_rnd)
     P.background = url_bg ?? bools[Bbg]
     P.filled = url_fill ?? bools[Bf]
-    P.project = url_proj ?? true ?? bools[Bp]
+    P.project = url_proj ?? P.project ?? true ?? bools[Bp]
     P.interactive = url_int ?? bools[Bi]
     P.outlines = P.outlines ?? false
 
