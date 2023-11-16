@@ -185,12 +185,12 @@ function draw() {
     // }
     document.body.style.backgroundColor = P.background ? P.ink : '#ffffff'//P.ink
 
-    // if (P.outlines) {
-    //     polys.map(poly => {
-    //         let outline = new Poly(poly.shape, 0, 0, 1 * P.length / 18, 0, 1)
-    //         outline.setColor(-1, '#dddddd').draw()
-    //     })
-    // }
+    if (P.outlines) {
+        polys.map(poly => {
+            let outline = new Poly(poly.shape, 0, 0, 1 * P.length / 18, 0, 1)
+            outline.setColor(-1, '#dddddd').draw()
+        })
+    }
 
     baked.forEach(path => {
         path.strokeColor = P.background ? '#ffffff' : P.ink
@@ -335,6 +335,10 @@ function draw() {
         url_save = false
         noLoop()
     }
+    // if (frameCount > 1000) {
+    //reload page
+    // window.location.reload()
+    // }
 }
 let gifstart
 
