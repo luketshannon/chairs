@@ -146,7 +146,8 @@ function setup() {
 }
 
 
-let img = `img${Math.floor(Math.random() * 5 + 1)}`
+// let img = `img${Math.floor(Math.random() * 5 + 1)}`
+let img = 'img3'
 
 function draw() {
     // print(randomDone)
