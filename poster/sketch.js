@@ -191,7 +191,7 @@ function draw() {
 
     var raster = new paper.Raster(img);
     raster.position = paper.view.center
-    raster.scale(0.35);
+    raster.scale(0.25);
 
     if (P.outlines) {
         polys.map(poly => {
