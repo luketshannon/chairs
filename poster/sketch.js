@@ -14,7 +14,7 @@ let S = 1000
 const urlParams = new URLSearchParams(window.location.search);
 
 let bitstring = urlParams.get('bits') ?? ''
-let hash = urlParams.get('hash') ?? ''
+let hash = '0x5660000a990000af80300a0900f0c1f00009f8000000342fc4300f0303ffffff'//urlParams.get('hash') ?? ''
 let url_x = urlParams.get('x') ?? ''
 let url_y = urlParams.get('y') ?? ''
 let url_proj = urlParams.get('project') ?? ''
