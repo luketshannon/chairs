@@ -5,16 +5,16 @@
 // THIS WEEK
 // 1] perfect scalability
 // 2] bake svg to loaded file
-gui.domElement.style.display = 'none';
+
 
 let svgwidthin = 4 * 12
-let svgheightin = 6 * 12
+let svgheightin = 8 * 12
 let S = 1000
 
 const urlParams = new URLSearchParams(window.location.search);
 
 let bitstring = urlParams.get('bits') ?? ''
-let hash = '0x5660000a990000af80300a0900f0c1f00009f8000000342fc4300f0303ffffff'//urlParams.get('hash') ?? ''
+let hash = urlParams.get('hash') ?? ''
 let url_x = urlParams.get('x') ?? ''
 let url_y = urlParams.get('y') ?? ''
 let url_proj = urlParams.get('project') ?? ''
@@ -24,7 +24,6 @@ let url_t = urlParams.get('t') ?? ''
 let url_int = urlParams.get('float') ?? ''
 let url_save = urlParams.get('save') ?? ''
 let url_rnd = urlParams.get('rnd') ?? ''
-let url_saveGIF = urlParams.get('saveGIF') ?? ''
 
 let P = {}
 function setupParams() {
@@ -38,11 +37,10 @@ function setupParams() {
     url_t = url_t ? float(url_t) : undefined
     url_int = url_int ? int(url_int) : undefined
     url_save = url_save ? int(url_save) : undefined
-    url_saveGIF = url_saveGIF ? int(url_saveGIF) : undefined
-    url_rnd = 0 //url_rnd === '' ? 1 : url_rnd === 0 ? 0 : int(url_rnd)
+    url_rnd = url_rnd == '' ? 1 : int(url_rnd)
     P.background = url_bg ?? bools[Bbg]
     P.filled = url_fill ?? bools[Bf]
-    P.project = url_proj ?? P.project ?? true ?? bools[Bp]
+    P.project = url_proj ?? bools[Bp]
     P.interactive = url_int ?? bools[Bi]
     P.outlines = P.outlines ?? false
 
@@ -54,13 +52,10 @@ function setupParams() {
 
     P.randomLayout = randomLayout
     P.gridWidth = P.gridWidth ?? W / 8
-    P.ink = '#ffffff'
 
     if (firstSetup)
         gui.myadds(P)
 }
-
-
 
 let faces, polys, baked, projections, projectionsStart, attrs, layouts
 let firstSetup = true
@@ -146,28 +141,18 @@ function setup() {
 }
 
 
-let img = `img${Math.floor(Math.random() * 5 + 1)}`
-// let img = 'img3'
-
 function draw() {
-    // print(randomDone)
-    // count all paper objects and print the number of them
-    // print(paper.project.getItems({ recursive: true }).length)
-    // print(allRandom, mapping)
-
     // print(frameRate() < 46 ? frameCount : 0)
     if (!isLooping()) {
         return
     }
 
     if (randomDone && url_rnd) {
+
         randomLayout()
     }
 
-    // remove all objects from the project
-    // break all links for garbage collection
-    paper.project.activeLayer.removeChildren()
-    // paper.project.clear()
+    paper.project.clear()
 
     let margin = 2 * S
     let bg = new paper.Shape.Rectangle(margin, margin, W - margin * 2, H - margin * 2)
@@ -190,11 +175,6 @@ function draw() {
     // }
     document.body.style.backgroundColor = P.background ? P.ink : '#ffffff'//P.ink
 
-    var raster = new paper.Raster(img);
-    raster.position = paper.view.center
-    // raster.scale(0.25);
-    raster.scale(0.33);
-
     if (P.outlines) {
         polys.map(poly => {
             let outline = new Poly(poly.shape, 0, 0, 1 * P.length / 18, 0, 1)
@@ -216,9 +196,9 @@ function draw() {
     //     paper.project.activeLayer.addChild(pair[0])
     // })
 
-    if (P.project && (randomDone || !url_rnd)) {
+    if (P.project && randomDone) {
         baked.forEach(path => {
-            path.fillColor = P.background ? P.ink : '#ffffff'
+            path.fillColor = '#ffffff'
             path.strokeColor = P.background ? '#ffffff' : P.ink
             if (!P.filled) path.remove()
         })
@@ -226,13 +206,8 @@ function draw() {
             path.strokeColor = "#ffffff"
             path.fillColor = P.ink
         })
+        let { tops, bots, orientations } = project(projections)
 
-        let arr = project(projections)
-        let tops = arr[0]
-        let bots = arr[1]
-        let orientations = arr[2]
-        // print(tops, bots, orientations)
-        // print(arr)
         let allSides = projections.map((path, i) => {
             if (projectionsStart.length) {
                 path = projectionsStart[i]
@@ -262,28 +237,20 @@ function draw() {
         // P.x += 0.01
         // P.y += 0.01
         // let distance = 1//mouseX / W//1 - constrain(dist(windowWidth / 2, windowHeight / 2, mouseX, mouseY) / W, 0, 1)
-        // let t = url_t ?? frameCount
-        // let distance = map(sn(t / 600, 1000), -1, 1, -0.05, 2)
-        let distance
+        let t = url_t ?? frameCount
+        let distance = map(sn(t / 600, 1000), -1, 1, -0.05, 2)
         if (P.interactive) {
-            distance = 1
-            if (P.x % TAU > PI / 2 && P.x % TAU < 3 * PI / 2) {
-                distance = cos(map(P.x % TAU, PI / 2, 3 * PI / 2, 0, TAU)) * 0.5 + 0.5
-            }
-            if (mouseIsPressed)
-                // distance = (mouseX - W / 2) / W
-                distance = distance
-            else {
-                P.x += 0.009
-            }
+            P.x += sn(t / 600) / 50
+            P.y += sn(t / 600, 500) / 50
         }
 
-        // if (!P.interactive || !randomDone) {
-        //     // distance = oscillateWithCycle(t / 100, 5)
-        //     distance = 1
-        //     if (!mouseIsPressed)
-        //         P.x += 0.007
-        // }
+        if (!P.interactive || !randomDone) {
+            // distance = oscillateWithCycle(t / 100, 5)
+            // distance = constrain(mouseX / W, 0, 1)
+            distance = 1
+            if (!mouseIsPressed)
+                P.x += 0.007
+        }
 
         // tween doubled up baked paths with tops and bots
         allSides.map(([orientation, path, top, bot], i) => {
@@ -308,6 +275,10 @@ function draw() {
                 quad.strokeJoin = 'bevel'
             })
             // path.remove()
+
+            // P.x += 0.002
+            // P.y += 0.3
+
             // ordering
             let tol = 0
             let dot = pathtop.clockwise
@@ -329,29 +300,12 @@ function draw() {
     }
 
     updatePathsStroke()
-    if (url_saveGIF && randomDone) {
-        if (gifstart === undefined) {
-            P.x = -PI / 8
-            gifstart = P.x
-        }
-        // savePaperSVG()
-        print('save')
-        if (P.x > gifstart + TAU) {
-            url_saveGIF = false
-            noLoop()
-        }
-    }
     if (url_save && randomDone) {
         savePaperSVG()
         url_save = false
         noLoop()
     }
-    // if (frameCount > 1000) {
-    //reload page
-    // window.location.reload()
-    // }
 }
-let gifstart
 
 function updatePathsStroke() {
     // Iterate over all layers in the project
@@ -371,7 +325,6 @@ function updatePathsStroke() {
             }
         }
     }
-
 }
 
 
@@ -539,8 +492,8 @@ function project(baked) {
         1: [0, -137, 190, 5 / 180 * PI, PI, 0], //back
         2: [0, 190, -186, 0, 0, 0], // front
         3: [0, 205, 195, -5 / 180 * PI, PI, 0], // skirt
-        4: [-206, 57, 10, 0, PI / 2, 0], // right side
-        5: [206, 57, 10, 0, -PI / 2, 0], // left side
+        4: [-206, 55, 10, 0, PI / 2, 0], // right side
+        5: [206, 55, 10, 0, -PI / 2, 0], // left side
     }
 
     function projectPiece(com, piece, tx = 0, ty = 0, tz = 0, rx = 0, ry = 0, rz = 0, reverseInk = false) {
@@ -568,6 +521,7 @@ function project(baked) {
 
         let topPaperMatrix = new paper.Matrix(topMatrix[0][0], topMatrix[1][0], topMatrix[0][1], topMatrix[1][1], topMatrix[0][2], topMatrix[1][2])
         let botPaperMatrix = new paper.Matrix(botMatrix[0][0], botMatrix[1][0], botMatrix[0][1], botMatrix[1][1], botMatrix[0][2], botMatrix[1][2])
+
         top.matrix.append(topPaperMatrix)
         bot.matrix.append(botPaperMatrix)
         let topTransformation = new paper.Point(topMatrix[0][3], topMatrix[1][3])
@@ -578,31 +532,29 @@ function project(baked) {
         top.translate(W / 2, H / 2)
         bot.translate(W / 2, H / 2)
 
-        return [top, bot, orientation]
+
+        return { top, bot, orientation }
     }
 
     let tops = []
     let bots = []
     let orientations = []
-    baked.forEach((piece, i) => {
+    baked.map((piece, i) => {
         // get center of mass of all faces
         let com = faces[i].reduce((acc, poly) => {
             return acc.add(poly.centerOfMass())
         }, vec(0, 0))
         com = com.div(faces[i].length)
         let transform = bakeTransforms[i]
-        let arr = projectPiece(com, piece, ...transform, reverseInk = false)
-        let top = arr[0]
-        let bot = arr[1]
-        let orientation = arr[2]
-        // bot.bringToFront()
-        // top.bringToFront()
+        let { top, bot, orientation } = projectPiece(com, piece, ...transform, reverseInk = false)
+        bot.bringToFront()
+        top.bringToFront()
 
         tops.push(top)
         bots.push(bot)
         orientations.push(orientation)
     })
-    return [tops, bots, orientations]
+    return { tops, bots, orientations }
 }
 
 Poly.prototype.expandRect = function (xAmt, yAmt = xAmt) {
@@ -644,10 +596,8 @@ function solve(polys, faces) {
     return [baked, projections, layouts]
 }
 function simplifyCollinear(path, eps = 8 * S) {
-    if (!path) return path
     if (path instanceof paper.CompoundPath) {
         // Handle compound paths
-        if (!path.children.length) return path
         for (let childPath of path.children) {
             simplifyPath(childPath, eps);
         }
@@ -784,9 +734,9 @@ let randomDone = false
 let allRandom = []
 let mapping
 async function randomLayout() {
-    let margin = 15 * S
-    let canvasBounds = new paper.Rectangle(margin, margin, W - margin * 2, H - margin * 2)
 
+    let margin = 15 * S
+    let canvasBounds = new paper.Rectangle(margin, margin, paper.view.size.width - margin * 2, paper.view.size.height - margin * 2);
     let intersectsAny = (path, paths, andCanvas = true) => {
         if (!path.bounds.intersects(canvasBounds) || !canvasBounds.contains(path.bounds)) {
             return true
@@ -799,8 +749,8 @@ async function randomLayout() {
         return false
     }
 
-
     async function copyPaths(final = false) {
+
         projectionsStart = []
         mapping.forEach((match, i) => {
             // print(i, match, baked, baked[match[1]])
@@ -808,7 +758,7 @@ async function randomLayout() {
             let path = baked[match[1]]
             path.applyMatrix = false
             path.rotation = match[0].rotation
-            path.position = match[0].position.clone()
+            path.position = match[0].position
             projectionStart = projections[i].clone()
             projectionStart.applyMatrix = false
             projectionStart.rotation = match[0].rotation
@@ -881,7 +831,7 @@ async function randomLayout() {
     // return
 
     mapping = allRandom.map((path, i) => [path, i])
-    // mapping = mapping.sort((a, b) => a[0].bounds.area - b[0].bounds.area)
+    mapping = mapping.sort((a, b) => a[0].bounds.area - b[0].bounds.area)
     allRandom = mapping.map(pair => pair[0])
 
 
@@ -1023,12 +973,10 @@ function removeContainedSubpaths(compoundPath) {
     pathsToRemove.forEach(function (path) {
         path.remove();
     });
-
-    //TODO
-    // if (!oldBounds.equals(compoundPathClone.bounds)) {
-    //     print('not equal')
-    //     compoundPathClone = compoundPath;
-    // }
+    if (!oldBounds.equals(compoundPathClone.bounds)) {
+        print('not equal')
+        compoundPathClone = compoundPath;
+    }
 
 
     // After removal, if only one path is left, it's no longer a compound path.

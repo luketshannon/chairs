@@ -5,16 +5,16 @@
 // THIS WEEK
 // 1] perfect scalability
 // 2] bake svg to loaded file
-gui.domElement.style.display = 'none';
+
 
 let svgwidthin = 4 * 12
-let svgheightin = 6 * 12
+let svgheightin = 8 * 12
 let S = 1000
 
 const urlParams = new URLSearchParams(window.location.search);
 
 let bitstring = urlParams.get('bits') ?? ''
-let hash = '0x5660000a990000af80300a0900f0c1f00009f8000000342fc4300f0303ffffff'//urlParams.get('hash') ?? ''
+let hash = urlParams.get('hash') ?? ''
 let url_x = urlParams.get('x') ?? ''
 let url_y = urlParams.get('y') ?? ''
 let url_proj = urlParams.get('project') ?? ''
@@ -39,7 +39,7 @@ function setupParams() {
     url_int = url_int ? int(url_int) : undefined
     url_save = url_save ? int(url_save) : undefined
     url_saveGIF = url_saveGIF ? int(url_saveGIF) : undefined
-    url_rnd = 0 //url_rnd === '' ? 1 : url_rnd === 0 ? 0 : int(url_rnd)
+    url_rnd = url_rnd === '' ? 1 : url_rnd === 0 ? 0 : int(url_rnd)
     P.background = url_bg ?? bools[Bbg]
     P.filled = url_fill ?? bools[Bf]
     P.project = url_proj ?? P.project ?? true ?? bools[Bp]
@@ -54,13 +54,10 @@ function setupParams() {
 
     P.randomLayout = randomLayout
     P.gridWidth = P.gridWidth ?? W / 8
-    P.ink = '#ffffff'
 
     if (firstSetup)
         gui.myadds(P)
 }
-
-
 
 let faces, polys, baked, projections, projectionsStart, attrs, layouts
 let firstSetup = true
@@ -81,7 +78,7 @@ function setup() {
     firstSetup = false
     frameRate(60)
 
-    getPolysFromSVG('all-all-colors-fixed-copy2.svg').then(groups => {
+    getPolysFromSVG('all-all-colors-fixed-copy3.svg').then(groups => {
         let rightMost = groups.reduce((acc, group) => {
             let right = group.reduce((acc, poly) => {
                 return Math.max(acc, poly.bbr)
@@ -146,9 +143,6 @@ function setup() {
 }
 
 
-let img = `img${Math.floor(Math.random() * 5 + 1)}`
-// let img = 'img3'
-
 function draw() {
     // print(randomDone)
     // count all paper objects and print the number of them
@@ -159,6 +153,7 @@ function draw() {
     if (!isLooping()) {
         return
     }
+
 
     if (randomDone && url_rnd) {
         randomLayout()
@@ -189,11 +184,6 @@ function draw() {
     //     return muted
     // }
     document.body.style.backgroundColor = P.background ? P.ink : '#ffffff'//P.ink
-
-    var raster = new paper.Raster(img);
-    raster.position = paper.view.center
-    // raster.scale(0.25);
-    raster.scale(0.33);
 
     if (P.outlines) {
         polys.map(poly => {
@@ -271,19 +261,18 @@ function draw() {
                 distance = cos(map(P.x % TAU, PI / 2, 3 * PI / 2, 0, TAU)) * 0.5 + 0.5
             }
             if (mouseIsPressed)
-                // distance = (mouseX - W / 2) / W
-                distance = distance
+                distance = (mouseX - W / 2) / W
             else {
-                P.x += 0.009
+                P.x += 0.007
             }
         }
 
-        // if (!P.interactive || !randomDone) {
-        //     // distance = oscillateWithCycle(t / 100, 5)
-        //     distance = 1
-        //     if (!mouseIsPressed)
-        //         P.x += 0.007
-        // }
+        if (!P.interactive || !randomDone) {
+            // distance = oscillateWithCycle(t / 100, 5)
+            distance = 1
+            if (!mouseIsPressed)
+                P.x += 0.007
+        }
 
         // tween doubled up baked paths with tops and bots
         allSides.map(([orientation, path, top, bot], i) => {
@@ -350,6 +339,7 @@ function draw() {
     //reload page
     // window.location.reload()
     // }
+    console.log(S * 12)
 }
 let gifstart
 
@@ -371,7 +361,6 @@ function updatePathsStroke() {
             }
         }
     }
-
 }
 
 
