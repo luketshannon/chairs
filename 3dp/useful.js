@@ -1,3 +1,4 @@
+
 let vec, D, canvas
 let PHI = 1.61803398875
 let PPI = 96
@@ -9,7 +10,7 @@ p5.disableFriendlyErrors = true
 
 function setupUseful() {
     setupRandom()
-    createButton('save').mousePressed(saveNamed)
+    // createButton('save').mousePressed(saveNamed)
     cols = setupColors(colSubset)
     vec = createVector
     W = width

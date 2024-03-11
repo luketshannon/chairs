@@ -1,8 +1,14 @@
 let seed = ''
 
+
+let A_R = 1
+let D_S = 1000
+let DIM = Math.min(window.innerWidth, window.innerHeight / A_R)
+let SZ = DIM / D_S
+
 function presetup() {
 
-    canvas = createCanvas(800, 800)
+    canvas = createCanvas(DIM, DIM)
     setupUseful()
 
     // for (let i = 0; i < 5; i++) {
@@ -17,8 +23,8 @@ function presetup() {
 function setup() {
     presetup()
     // console.log(randomHash())
-    d = design(0, 0, 180, 100)
-    h = rnd(100, 400)
+    d = design(0, 0, 180 * SZ, 100 * SZ)
+    h = 400 * SZ
     t = rnd(PI / 2 / 300)
     c = rnd(cols)
 }
@@ -28,7 +34,7 @@ function draw() {
     background(255)
     fill(128)
     for (let i = 0; i < h; i += 4) {
-        let p = new Poly(d.shape, W / 2, H / 2 + h / 2 - i, map(noise(i / 800), 0, 1, 0.5, 1.2), frameCount / 100 + t * i)
+        let p = new Poly(d.shape, W / 2, H / 2 + h / 2 - i, 1, frameCount / 100 + t * i)
         p.draw()
     }
     // updateSliders()
