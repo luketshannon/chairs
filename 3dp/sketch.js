@@ -25,14 +25,14 @@ function setup() {
     // console.log(randomHash())
     d = design(0, 0, 180 * SZ, 100 * SZ)
     h = 400 * SZ
-    t = rnd(PI / 2 / 300)
+    t = rnd(-PI / 2 / 300, PI / 2 / 300)
     c = rnd(cols)
 }
 let d, h, t, c
 
 function draw() {
     background(255)
-    fill(128)
+    fill(200)
     for (let i = 0; i < h; i += 4) {
         let p = new Poly(d.shape, W / 2, H / 2 + h / 2 - i, 1, frameCount / 100 + t * i)
         p.draw()
