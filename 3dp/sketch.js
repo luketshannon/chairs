@@ -67,6 +67,9 @@ function design(x, y, r1 = 20, r2 = 200) {
     pw = pw.wrinkle(10, 10, 3, 100, 100, 1, rnd(9999))
     pw.reflect(arr)
 
+    let com = pw.centerOfMass()
+    pw = new Poly(pw.shape, x - com.x, y - com.y, 1, 0)
+
     return pw
 }
 
